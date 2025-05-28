@@ -5,7 +5,7 @@
 % Operating System: Microsoft Windows 11 Pro Version 10.0 (Build 26100)
 % Java Version: Java 1.8.0_202-b08 with Oracle Corporation Java HotSpot(TM) 64-Bit Server VM mixed mode
 % -----------------------------------------------------------------------------------------------------
-
+% Symbolic Math Toolbox          Version 24.1        (R2024a)
 % yalmip('version') 
 % ans =
 % 
