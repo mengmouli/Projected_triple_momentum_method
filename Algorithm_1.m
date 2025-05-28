@@ -59,7 +59,7 @@ constraint_fun = @(y) { y' * Q * y <= 1;
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
 %% Run Algorithm 1
-num_steps = 10;
+num_steps = 100;
 x0 = rand(2*d,1);
 results_proj_1 = projected_triple_momentum_1(A, B, C, D, x0, num_steps, grad_f, proj_fun);
 %% Compute the optimal solution using yalmip

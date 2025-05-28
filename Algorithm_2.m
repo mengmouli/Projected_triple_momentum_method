@@ -15,14 +15,14 @@ C_T = C_O*V;
 D_T = zeros(size(C_T,1), size(B_T,2));
 %% Objective function and parameters
 % Define objective function
-% d = 2;
-% F = [100 -1; -1 1];
-% p = [1; 10];
-% f_handle = @(x) 0.5 * x' * F * x + p' * x;
-d = 3;
-F =  [100 -1 1; -1 1 2; 1 2 10];
-p = [1; 10; 5];
+d = 2;
+F = [100 -1; -1 1];
+p = [1; 10];
 f_handle = @(x) 0.5 * x' * F * x + p' * x;
+% d = 3;
+% F =  [100 -1 1; -1 1 2; 1 2 10];
+% p = [1; 10; 5];
+% f_handle = @(x) 0.5 * x' * F * x + p' * x;
 
 % Compute gradient, strong convexity constant and Lipchitz constant (for
 % quadratic function only) 
@@ -42,24 +42,24 @@ C = double(C_T);
 D = zeros(size(C_T,1), size(B_T,2));
 %% Constraints
 % Ellipsoid constraint
-% Q = [1 0; 0 2];
-% % all constraints
-% constraint_fun = @(y) { y' * Q * y <= 1;
-%                         % y(1) >= 0;
-%                         % y(2) <= 0.5
-%                         };
-
-Q = [1 0 0; 0 2 0; 0 0 3];
-constraint_fun = @(y) { y' * Q * y <= 100;
-                        y(1) >= 5;
-                        y(2) >= -1;
-                        y(3) >= 0
+Q = [1 0; 0 2];
+% all constraints
+constraint_fun = @(y) { y' * Q * y <= 1;
+                        % y(1) >= 0;
+                        % y(2) <= 0.5
                         };
+
+% Q = [1 0 0; 0 2 0; 0 0 3];
+% constraint_fun = @(y) { y' * Q * y <= 100;
+%                         y(1) >= 5;
+%                         y(2) >= -1;
+%                         y(3) >= 0
+%                         };
 
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
 %% Run Algorithm 2
-num_steps = 150;
+num_steps = 100;
 x0 = rand(2*d,1);
 % Compute Lyapunov function matrix P
 P = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);

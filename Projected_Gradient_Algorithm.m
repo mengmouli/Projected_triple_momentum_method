@@ -2,14 +2,14 @@
 clear all;
 %% Objective function and parameters
 % Define objective function
-% d = 2;
-% F = [100 -1; -1 1];
-% p = [1; 10];
-% f_handle = @(x) 0.5 * x' * F * x + p' * x;
-d = 3;
-F =  [100 -1 1; -1 1 2; 1 2 10];
-p = [1; 10; 5];
+d = 2;
+F = [100 -1; -1 1];
+p = [1; 10];
 f_handle = @(x) 0.5 * x' * F * x + p' * x;
+% d = 3;
+% F =  [100 -1 1; -1 1 2; 1 2 10];
+% p = [1; 10; 5];
+% f_handle = @(x) 0.5 * x' * F * x + p' * x;
 % Compute gradient, strong convexity constant and Lipchitz constant (for
 % quadratic function only) 
 % strong convexity constant m = 0.9899;  and
@@ -18,19 +18,19 @@ f_handle = @(x) 0.5 * x' * F * x + p' * x;
 [grad_f, m, L] = analyze_quadratic_function(f_handle, d);
 %% Constraints
 % Ellipsoid constraint
-% Q = [1 0; 0 2];
-% % all constraints
-% constraint_fun = @(y) { y' * Q * y <= 1;
-%                         % y(1) >= 0;
-%                         % y(2) <= 0.5
-%                         };
-
-Q = [1 0 0; 0 2 0; 0 0 3];
-constraint_fun = @(y) { y' * Q * y <= 100;
-                        y(1) >= 5;
-                        y(2) >= -1;
-                        y(3) >= 0
+Q = [1 0; 0 2];
+% all constraints
+constraint_fun = @(y) { y' * Q * y <= 1;
+                        % y(1) >= 0;
+                        % y(2) <= 0.5
                         };
+
+% Q = [1 0 0; 0 2 0; 0 0 3];
+% constraint_fun = @(y) { y' * Q * y <= 100;
+%                         y(1) >= 5;
+%                         y(2) >= -1;
+%                         y(3) >= 0
+%                         };
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
 %% System matrices
