@@ -62,7 +62,10 @@ proj_fun = build_projection(constraint_fun);  % or with other constraints
 num_steps = 100;
 x0 = rand(2*d,1);
 % Compute Lyapunov function matrix P
-P = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);
+[P,K,delta,epsi] = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);
+if ~(delta > 0 && epsi <= 0)
+    warning('positive-definite and/or semi-negative LMI condition violated');
+end
 % Run algorithm 2
 results_proj_2 = projected_triple_momentum_2(A, B, C, D, x0, num_steps, grad_f, proj_fun, P);
 %% Compute the optimal solution using yalmip

@@ -77,12 +77,15 @@ constraint_fun = @(y) { y' * Q * y <= 1;
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
 %% RUN algorithms
-x0 = 10*rand(2*d,1);
+x0 = 1*rand(2*d,1);
 num_steps = 100;
 % Run algorithm 1
 results_proj_1 = projected_triple_momentum_1(A, B, C, D, x0, num_steps, grad_f, proj_fun);
 % Compute Lyapunov function matrix P
-P = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);
+[P,K,delta,epsi] = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);
+if ~(delta > 0 && epsi <= 0)
+    warning('positive-definite and/or semi-negative LMI condition violated');
+end
 % Run algorithm 2
 results_proj_2 = projected_triple_momentum_2(A, B, C, D, x0, num_steps, grad_f, proj_fun, P);
 %
@@ -100,7 +103,6 @@ ops.mosek.MSK_DPAR_INTPNT_TOL_MU_RED     = 1e-10;
 ops.mosek.MSK_DPAR_INTPNT_TOL_PATH       = 1e-10;
 ops.mosek.MSK_DPAR_INTPNT_TOL_STEP_SIZE  = 1e-10;
 % ops = sdpsettings('solver', 'sedumi','sedumi.eps', 1e-12);
-
 sol = optimize(Constraints,Objective, ops);
 x_optimal_proj = value(x_proj);
 f_optimal_proj = f_handle(x_optimal_proj);
