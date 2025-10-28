@@ -1,8 +1,8 @@
-%%  Projection triple momentum (TM) method Algorithm_1
+%% Convergence performance for unconstrained TMM
 clear all;
 %% system matrices
 syms alpha beta gamma positive;
-% TM method original state-space representation
+% Triple Momentum algorithm original state-space representation
 A_O = [1+beta -beta; 1 0];
 B_O = [-alpha; 0];
 C_O = [1+gamma -gamma];
@@ -19,15 +19,11 @@ d = 2;
 F = [100 -1; -1 1];
 p = [1; 10];
 f_handle = @(x) 0.5 * x' * F * x + p' * x;
-% d = 3;
-% F =  [100 -1 1; -1 1 2; 1 2 10];
-% p = [1; 10; 5];
-% f_handle = @(x) 0.5 * x' * F * x + p' * x;
+
 % Compute gradient, strong convexity constant and Lipchitz constant (for
 % quadratic function only) 
 % strong convexity constant m = 0.9899;  and
 % Lipschitz constant L = 100.0101;   in our example.
-% Compute gradient, strong convexity constant and Lipchitz constant
 [grad_f, m, L] = analyze_quadratic_function(f_handle, d);
 %% Algorithm system matrices
 rho = 1 - 1/(sqrt(L/m)); % fastest convergence rate
@@ -44,23 +40,16 @@ D = zeros(size(C_T,1), size(B_T,2));
 % Ellipsoid constraint
 Q = [1 0; 0 2];
 % all constraints
-constraint_fun = @(y) { y' * Q * y <= 5;
+constraint_fun = @(y) { %y' * Q * y <= 5;
                         % y(1) >= 0;
                         % y(2) <= 0.5
                         };
-
-% Q = [1 0 0; 0 2 0; 0 0 3];
-% constraint_fun = @(y) { y' * Q * y <= 100;
-%                         % y(1) >= 5;
-%                         % y(2) >= -1;
-%                         % y(3) >= 0
-%                         };
-
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
-%% Run Algorithm 1
-num_steps = 100;
-x0 = rand(2*d,1);
+%% RUN algorithms
+x0 = 1*rand(2*d,1);
+num_steps = 200;
+% Run algorithm 1 (without projection)
 results_proj_1 = projected_triple_momentum_1(A, B, C, D, x0, num_steps, grad_f, proj_fun);
 %% Compute the optimal solution using yalmip
 x_proj = sdpvar(d,1);
@@ -79,27 +68,21 @@ ops.mosek.MSK_DPAR_INTPNT_TOL_STEP_SIZE  = 1e-10;
 sol = optimize(Constraints,Objective, ops);
 x_optimal_proj = value(x_proj);
 f_optimal_proj = f_handle(x_optimal_proj);
+%% theoretical rate bound
+y0 = x0(1:d);                % initial state
+Cx = norm(y0 - x_optimal_proj, 2);         % initial distance constant
+% Distance/error bound
+x_rate_bound = Cx * rho.^(0:num_steps);
+f_0 = f_handle(y0);
+Cf = norm(f_0 - f_optimal_proj, 2);
+f_rate_bound = Cf * (rho.^(0:num_steps)).^2;
 %% Plot variable norm
 figure;
-semilogy(vecnorm(results_proj_1.y-x_optimal_proj, 2, 1),'LineWidth',2);
+semilogy(vecnorm(results_proj_1.y-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(x_rate_bound, '--', 'LineWidth', 1.5);   % theoretical line
 grid on;
-% xlim([0, 40]);
-% ylim([1e-13, 1e2]);
-% yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Algorithm 1','fontsize', 11);
+xlim([0, 200]);
+ylim([1e-8, 1e2]);
+legend('Triple momentum method', 'Theoretical bound','fontsize', 20);
 xlabel ('Iteration Step','fontsize', 15);
 ylabel('$\left\| y_{k} - y_{\Omega}^{\textup{opt}} \right\|_2$', 'fontsize', 15, 'Interpreter','latex');
-%% plot objective function error
-f_record = zeros(1, num_steps);
-for k = 1:num_steps
-    f_record(k) = f_handle(results_proj_1.y(:,k));
-end
-figure;
-semilogy(vecnorm(f_record-f_optimal_proj, 2, 1),'LineWidth',2);
-grid on;
-% xlim([0, 40]);
-ylim([1e-13, 1e3]);
-yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Algorithm 1', 'fontsize', 11);
-xlabel ('Iteration Step','fontsize', 15);
-ylabel('$\left| f(y_{k}) - f_{\Omega}^{\textup{opt}} \right|$', 'fontsize', 15, 'Interpreter','latex');

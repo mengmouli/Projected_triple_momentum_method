@@ -61,7 +61,7 @@ D = zeros(size(C_T,1), size(B_T,2));
 % Ellipsoid constraint
 Q = [1 0; 0 2];
 % all constraints
-constraint_fun = @(y) { y' * Q * y <= 1;
+constraint_fun = @(y) { y' * Q * y <= 5;
                         % y(1) >= 0;
                         % y(2) <= 0.5
                         };
@@ -78,7 +78,7 @@ constraint_fun = @(y) { y' * Q * y <= 1;
 proj_fun = build_projection(constraint_fun);  % or with other constraints
 %% RUN algorithms
 x0 = 1*rand(2*d,1);
-num_steps = 100;
+num_steps = 200;
 % Run algorithm 1
 results_proj_1 = projected_triple_momentum_1(A, B, C, D, x0, num_steps, grad_f, proj_fun);
 % Compute Lyapunov function matrix P
@@ -113,16 +113,25 @@ C_g = 1;
 D_g = 0;
 x0_g = x0(1:d);
 results_proj_g = proj_gradient(A_g, B_g, C_g, D_g, x0_g, num_steps, grad_f, proj_fun);
+%% theoretical rate bound
+y0 = results_proj_g.x(:,1);                % initial state
+Cx = norm(y0 - x_optimal_proj, 2);         % initial distance constant
+% Distance/error bound
+x_rate_bound = Cx * rho.^(0:num_steps);
+f_0 = f_handle(results_proj_g.x(:,1));
+Cf = norm(f_0 - f_optimal_proj, 2);
+f_rate_bound = Cf * (rho.^(0:num_steps)).^2;
 %% Plot variable norm
 figure;
 semilogy(vecnorm(results_proj_g.x-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
 semilogy(vecnorm(results_proj_1.y-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
-semilogy(vecnorm(results_proj_2.y-x_optimal_proj, 2, 1),'LineWidth',2);
+semilogy(vecnorm(results_proj_2.y-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(x_rate_bound, '--', 'LineWidth', 1.5);   % theoretical line
 grid on;
-% xlim([0, 100]);
-% ylim([1e-13, 1e2]);
+xlim([0, 200]);
+ylim([1e-7, 1e2]);
 % yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Projected gradient descent','Algorithm 1', 'Algorithm 2','fontsize', 11);
+legend('Projected gradient descent','Algorithm 1', 'Algorithm 2', 'Theoretical bound','fontsize', 11);
 xlabel ('Iteration Step','fontsize', 15);
 ylabel('$\left\| y_{k} - y_{\Omega}^{\textup{opt}} \right\|_2$', 'fontsize', 15, 'Interpreter','latex');
 
@@ -138,11 +147,12 @@ end
 figure;
 semilogy(vecnorm(f_record_g-f_optimal_proj, 2, 1),'LineWidth',2); hold on;
 semilogy(vecnorm(f_record_1-f_optimal_proj, 2, 1),'LineWidth',2); hold on;
-semilogy(vecnorm(f_record_2-f_optimal_proj, 2, 1),'LineWidth',2);
+semilogy(vecnorm(f_record_2-f_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(f_rate_bound, '--', 'LineWidth', 1.5);    % <-- theoretical line
 grid on;
-% xlim([0, 100]);
-% ylim([1e-13, 1e3]);
+xlim([0, 200]);
+ylim([1e-10, 1e2]);
 % yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Projected gradient descent','Algorithm 1', 'Algorithm 2','fontsize', 11);
+legend('Projected gradient descent','Algorithm 1', 'Algorithm 2', 'Theoretical bound','fontsize', 11);
 xlabel ('Iteration Step','fontsize', 15);
-ylabel('$\left| f(y_{k}) - f(y_{\Omega}^{\textup{opt}}) \right|$', 'fontsize', 15, 'Interpreter','latex');
+ylabel('$\left| f(y_{k}) - f_{\Omega}^{\textup{opt}} \right|$', 'fontsize', 15, 'Interpreter','latex');

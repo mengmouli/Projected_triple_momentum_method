@@ -1,4 +1,21 @@
-%%  Projection triple momentum method Algorithm_2
+%% Convergence performance comparison among projected gradient, projected triple momentum Algorithm 1 and 2
+% ver
+% -----------------------------------------------------------------------------------------------------
+% MATLAB Version: 24.1.0.2689473 (R2024a) Update 6
+% Operating System: Microsoft Windows 11 Pro Version 10.0 (Build 26100)
+% Java Version: Java 1.8.0_202-b08 with Oracle Corporation Java HotSpot(TM) 64-Bit Server VM mixed mode
+% -----------------------------------------------------------------------------------------------------
+% Symbolic Math Toolbox          Version 24.1        (R2024a)
+% yalmip('version') 
+% ans =
+% 
+%     '20230622'
+
+% mosekopt('version')     
+% MOSEK Version 10.2.11 (Build date: 2024-12-3 13:30:04)
+% Copyright (c) MOSEK ApS, Denmark WWW: mosek.com
+% Platform: Windows/64-X86
+
 clear all;
 %% system matrices
 syms alpha beta gamma positive;
@@ -44,23 +61,26 @@ D = zeros(size(C_T,1), size(B_T,2));
 % Ellipsoid constraint
 Q = [1 0; 0 2];
 % all constraints
-constraint_fun = @(y) { y' * Q * y <= 5;
+constraint_fun = @(y) { y' * Q * y <= 1;
                         % y(1) >= 0;
                         % y(2) <= 0.5
                         };
 
 % Q = [1 0 0; 0 2 0; 0 0 3];
-% constraint_fun = @(y) { y' * Q * y <= 100;
-%                         y(1) >= 5;
-%                         y(2) >= -1;
-%                         y(3) >= 0
+% constraint_fun = @(y) { 
+%     y' * Q * y <= 1;
+%                         % y(1) >= 5;
+%                         % y(2) >= -1;
+%                         % y(3) >= 0
 %                         };
 
 % Define projection step
 proj_fun = build_projection(constraint_fun);  % or with other constraints
-%% Run Algorithm 2
+%% RUN algorithms
+x0 = 1*rand(2*d,1);
 num_steps = 100;
-x0 = rand(2*d,1);
+% Run algorithm 1
+results_proj_1 = projected_triple_momentum_1(A, B, C, D, x0, num_steps, grad_f, proj_fun);
 % Compute Lyapunov function matrix P
 [P,K,delta,epsi] = lyapunov_matrix_IQC_triple_momentum_unconstrained(A, B, C, D, m, L);
 if ~(delta > 0 && epsi <= 0)
@@ -68,6 +88,7 @@ if ~(delta > 0 && epsi <= 0)
 end
 % Run algorithm 2
 results_proj_2 = projected_triple_momentum_2(A, B, C, D, x0, num_steps, grad_f, proj_fun, P);
+%
 %% Compute the optimal solution using yalmip
 x_proj = sdpvar(d,1);
 Constraints = [];
@@ -82,31 +103,54 @@ ops.mosek.MSK_DPAR_INTPNT_TOL_MU_RED     = 1e-10;
 ops.mosek.MSK_DPAR_INTPNT_TOL_PATH       = 1e-10;
 ops.mosek.MSK_DPAR_INTPNT_TOL_STEP_SIZE  = 1e-10;
 % ops = sdpsettings('solver', 'sedumi','sedumi.eps', 1e-12);
-
 sol = optimize(Constraints,Objective, ops);
 x_optimal_proj = value(x_proj);
 f_optimal_proj = f_handle(x_optimal_proj);
+%% projected gradient algorithm (to show the solver precision limit)
+A_g = 1;
+B_g = - 2/(L + m);
+C_g = 1;
+D_g = 0;
+x0_g = x0(1:d);
+results_proj_g = proj_gradient(A_g, B_g, C_g, D_g, x0_g, num_steps, grad_f, proj_fun);
+%% theoretical rate bound
+y0 = results_proj_g.x(:,1);                % initial state
+Cx = norm(y0 - x_optimal_proj, 2);         % initial distance constant
+% Distance/error bound:  ||y_k - y*|| <= Cx * rho^k
+f_0 = f_handle(results_proj_g.x(:,1));
+Cf = f_0 - f_optimal_proj;
+f_rate_bound(end+1) = norm(f_handle(x0(1:d)) - f_optimal_proj)*rho^(j);
+end
 %% Plot variable norm
 figure;
+semilogy(vecnorm(results_proj_g.x-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(vecnorm(results_proj_1.y-x_optimal_proj, 2, 1),'LineWidth',2); hold on;
 semilogy(vecnorm(results_proj_2.y-x_optimal_proj, 2, 1),'LineWidth',2);
 grid on;
-% xlim([0, 40]);
+% xlim([0, 100]);
 % ylim([1e-13, 1e2]);
 % yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Algorithm 2','fontsize', 11);
+legend('Projected gradient descent','Algorithm 1', 'Algorithm 2','fontsize', 11);
 xlabel ('Iteration Step','fontsize', 15);
 ylabel('$\left\| y_{k} - y_{\Omega}^{\textup{opt}} \right\|_2$', 'fontsize', 15, 'Interpreter','latex');
+
 %% plot objective function error
-f_record = zeros(1, num_steps);
+f_record_g = zeros(1, num_steps);
+f_record_1 = zeros(1, num_steps);
+f_record_2 = zeros(1, num_steps);
 for k = 1:num_steps
-    f_record(k) = f_handle(results_proj_2.y(:,k));
+    f_record_g(k) = f_handle(results_proj_g.x(:,k));
+    f_record_1(k) = f_handle(results_proj_1.y(:,k));
+    f_record_2(k) = f_handle(results_proj_2.y(:,k));
 end
 figure;
-semilogy(vecnorm(f_record-f_optimal_proj, 2, 1),'LineWidth',2);
+semilogy(vecnorm(f_record_g-f_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(vecnorm(f_record_1-f_optimal_proj, 2, 1),'LineWidth',2); hold on;
+semilogy(vecnorm(f_record_2-f_optimal_proj, 2, 1),'LineWidth',2);
 grid on;
-% xlim([0, 40]);
+% xlim([0, 100]);
 % ylim([1e-13, 1e3]);
 % yticks([1e-13 1e-10 1e-5 1e0]);
-legend('Algorithm 2', 'fontsize', 11);
+legend('Projected gradient descent','Algorithm 1', 'Algorithm 2','fontsize', 11);
 xlabel ('Iteration Step','fontsize', 15);
 ylabel('$\left| f(y_{k}) - f(y_{\Omega}^{\textup{opt}}) \right|$', 'fontsize', 15, 'Interpreter','latex');
